@@ -1,53 +1,60 @@
 import os
 from datetime import datetime
 from typing import List, Dict, Any, Tuple
-import utils  # Импорт функций архитектора
+# Importing architect functions
+import utils
+#ctypes allows you to call functions from Windows DLL libraries directly in Python
+import ctypes
+# Library for getting string constants
+import string
 
 
 def get_current_drive() -> str:
-    '''Получение текущего диска Windows'''
-
-    try:
-        # Возвращает абсолютный путь к текущей рабочей директории
-        current_dir = os.getcwd()
-
-        # Возвращает кортеж (имя диска, остальной путь)
-        # Например: os.path.splitdrive('C:\User\Documents\file.txt')
-        # ->
-        # ('C:', '\User\Documents\file.txt')
-        drive = os.path.splitdrive(current_dir)[0]
-        return drive
+    '''
+    The function returns the current disk in the Windows operating system
     
-    except:
-        return 'C:'
+    Returns:
+        str:
+            The letter of the current disk with a colon (for example, 'C:')
+    '''
 
+    # Returns the absolute path to the current working directory
+    current_dir = os.getcwd()
+
+    #splitdrive returns a tuple (the disk name, the rest of the path), separating the path
+    # For example: os.path.splitdrive('C:\User\Documents\file.txt')
+    # ->
+    # ('C:', '\User\Documents\file.txt')
+    drive = os.path.splitdrive(current_dir)[0]
+
+    return drive
 
 
 def list_available_drives() -> List[str]:
-    '''Получение списка доступных дисков Windows'''
-
-    # ctypes позволяет вызывать функции из DLL библиотек Windows напрямую в Python
-    import ctypes
-    # Библиотека для получения строковых констант
-    import string
-
+    '''
+    The function returns a list of all available disks in the Windows operating system
+    
+    Returns:
+        List[str]:
+            A list of available drive letters with a colon (['C:', 'D:', 'E:'])
+    '''
     drives = []
     
     try:          
-        # Получаем битовую маску дисков (32 битное число, где каждый бит представляет диск)
-        # Если бит = 1, значит, соответствующий диск существует
+        # We get a bitmask of disks (a 32-bit number, where each bit represents a disk)
+        # If bit = 1, then the corresponding disk exists
         drives_bitmask = ctypes.windll.kernel32.GetLogicalDrives()
         
         i = 0
-        # Проходим по всем буквам от A до Z
-        # enumerate дает номер каждой букве: 0 для A, 1 для B, ... 25 для Z
+        # We go through all the letters from A to Z
+        # Each letter is assigned a number: 0 for A, 1 for B, ... 25 for Z
         for letter in string.ascii_uppercase:
-            # << - оператор побитового сдвига левого оператора влево 
-            # на количество позиций, указанное правым оператором
-            # Например для C (i=2): 1 (00000001) << 2 = 4 (00000100 в двоичной)
+            # << is the bitwise shift operator of the left operator to the left 
+            # for the number of positions specified by the right operator
+            # For example, for i=2: 1 (00000001) << 2 = 4 (00000100 in binary)
             mask = 1 << i
             
-            # Проверяем соответствующий букве бит
+            # Check the bit corresponding to the letter
             if drives_bitmask & mask:
                 drive_name = f'{letter}:'
                 drives.append(drive_name)
@@ -60,61 +67,79 @@ def list_available_drives() -> List[str]:
         return []
 
 
-
 def list_directory(path: str) -> Tuple[bool, List[Dict[str, Any]]]:
-    '''Отображение содержимого каталога в Windows'''
+    '''
+    The function displays the contents of a catalog in Windows with detailed information about each item.
+    
+    Args:
+        path (str): the path to the directory whose contents you want to display
+    
+    Returns:
+        Tuple[bool, List[Dict[str, Any]]]:
+            - (True, list_elements): if the operation is successful
+            - (False, []): if an error occurs
+    
+    The structure of the item in the returned list:
+        {
+            'name': str, # file or folder name
+            'type': str, # element type: 'file' or 'directory'
+            'size': str, # formatted size (for files) or 0 (for folders)
+            'modified': str, # last modified date in 'YYYY-MM-DD' format
+            'hidden': bool # is the element hidden
+        }
+    '''
 
     data_dir = []
     
-    # Проверяем путь
+    # Checking the path
     valid, _ = utils.validate_windows_path(path)
     if not valid:
         return False, []
     
-    # Проверяем существование пути
+    # Check the existence of a path
     if not os.path.exists(path):
         return False, []
     
     try:
-        # Получаем список файлов и папок
+        # Getting a list of files and folders (names, without full path)
         items = utils.safe_windows_listdir(path)
         
         for item in items:
-            # Получаем полный путь до элемента
+            # Getting the full path to the element
             full_path = os.path.join(path, item)
             
             try:
-                #Имя элемента
+                #Element name
                 item_name = item
 
-                # Тип элемента
+                #Element type
                 if os.path.isdir(full_path):
                     item_type = 'directory'
                 else:
                     item_type = 'file'
 
-                # Размер элемента
+                # Element size
                 try:
                     if item_type == 'file':
-                        # Получаем размер элемента в байтах
+                        # We get the size of the element in bytes
                         size = os.path.getsize(full_path)
-                        # Форматируем размер к удобному виду
+                        # Format the size to a convenient look
                         item_size = utils.format_size(size)
                     else:
                         item_size = 0
                 except:
                     item_size = 0
                 
-                # Время последнего изменения
+                # The time of the last change
                 try:
-                    # Получаем время последнего изменения в виде float, количество секунды с 1970 года 
+                    # We get the time of the last change as a float, the number of seconds since 1970
                     mod_time = os.path.getmtime(full_path)
-                    # Приводим время к нужному виду
+                    # We bring the time to the desired form
                     item_modified = datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d')
                 except:
                     item_modified = 'N/A'
 
-                # Проверка на скрытый файл
+                # Checking for a hidden file
                 item_hidden = utils.is_hidden_windows_file(full_path)
                 
 
@@ -129,15 +154,34 @@ def list_directory(path: str) -> Tuple[bool, List[Dict[str, Any]]]:
             except:
                 continue
        
-        return True, items
+        # We are returning the collected dictionaries, not the raw names.
+        return True, data_dir
         
     except:
         return False, []
 
 
-
 def format_directory_output(items: List[Dict[str, Any]]) -> None:
-    '''Форматированный вывод содержимого каталога для Windows'''
+    '''
+    The function of formatted output of directory contents to the Windows console
+    
+    Args:
+        items (List[Dict[str, Any]]): A list of catalog items obtained from list_directory()
+            Each item must contain the keys:
+            - 'name': str - the name of the file/folder
+            - 'type': str - type ('file' or 'directory')
+            - 'size': str - size (formatted string or number)
+            - 'modified': str - date of change in the format 'YYYY-MM-DD'
+            - 'hidden': bool - flag of the hidden element
+    
+    Conclusion:
+        Formatted table in the console with columns:
+        - TYPE (8 characters): FILE or DIR
+        - NAME (45 characters): The element name is truncated if it is longer than 38 characters.
+        - SIZE (15 characters): formatted file size or 0 for folders
+        - CHANGE (22 characters): the date of the last change
+        - HIDDEN (10 characters): "Hidden" or "Not hidden"
+    '''
 
     if not items:
         print('Каталог пуст')
@@ -145,30 +189,30 @@ def format_directory_output(items: List[Dict[str, Any]]) -> None:
     
     print('-' * 100)
     
-    # Заголовки колонок
+    # Column headers
     print(f'{'ТИП':<8} {'ИМЯ':<45} {'РАЗМЕР':<15} {'ИЗМЕНЕНИЕ':<22} {'СКРЫТЫЙ':<10}')
     print('-' * 100)
     
-    # Вывод элементов
+    # Output of elements
     for item in items:
-        # Тип
+        # Type
         if item['type'] == 'file':
             item_type = 'FILE'
         else:
             item_type = 'DIR'
         
-        # Имя
+        # Name
         item_name = item['name']
         if len(item_name) > 38:
             item_name = item_name[:35] + '...'
 
-        # Размер
+        # Size
         item_size = item['size']
 
-        # Изменение
+        # Modified
         item_modified = item['modified']
         
-        # Скрыт
+        # Hidden
         if item['hidden']:
             item_hidden = 'Скрыт'
         else:
@@ -177,19 +221,32 @@ def format_directory_output(items: List[Dict[str, Any]]) -> None:
         print(f'{item_type:<8} {item_name:<45} {item_size:<15} {item_modified:<22} {item_hidden:<10}')
 
 
-
 def move_up(current_path: str) -> str:
     '''
-    Переход в родительский каталог в Windows
-
-    - Если parent_path != current_path — обычный переход вверх.
-    - Если на корне диска (например 'C:\\') — переключаемся на следующий доступный диск
-      в списке, циклически (например, C: -> D:).
+    The function navigates to the parent directory or switches disks in Windows
+    
+    Args:
+        current_path (str): the current path in the file system
+    
+    Returns:
+        str: the new path after performing the transition operation
+    
+    The logic of the work:
+        1. If the current path is NOT the root of the disk:
+           - Goes to the parent directory
+           - Checks the validity of the new path
+           - Returns a new path or leaves the current one in case of an error
+        
+        2. If the current path IS the root of the disk (for example, 'C:\\'):
+           - Gets a list of available disks in the system
+           - If there is only one disk: it remains on the current disk
+           - If there are several disks: cycles to the next available disk
+           - Returns the path to the root of the new disk
     '''
-    # Получаем путь к родительскому каталогу
+    # Getting the path to the parent directory
     parent_path = utils.get_parent_path(current_path)
 
-    # Обычный переход вверх, если родитель отличается от текущего пути
+    # Normal upward transition if the parent is different from the current path
     if parent_path != current_path:
         valid, _ = utils.validate_windows_path(parent_path)
         if valid:
@@ -197,62 +254,103 @@ def move_up(current_path: str) -> str:
         else:
             return current_path
 
-    # Если parent_path == current_path, значит мы в корне диска
-    # Получаем список доступных дисков (['C:', 'D:', ...])
+    # If parent_path == current_path, then we are at the root of the disk
+    # Getting a list of available disks (['C:', 'D:', ...])
     drives = list_available_drives()
 
     if not drives:
         return current_path
 
-    # Если всего только один диск, то остаемся на нем
+    # If there is only one disk, then we stay on it
     if len(drives) == 1:
         return current_path
     
-    # Определяем текущий диск
+    # Defining the current disk
     current_drive = os.path.splitdrive(current_path)[0]
     if not current_drive:
         current_drive = get_current_drive()
 
-    # Найдем индекс текущего диска в списке
-    drive_index = drives.index(current_drive)
+    # Find the index of the current disk in the list
+    try:
+        drive_index = drives.index(current_drive)
+    except:
+        drive_index = 0
 
-    # Переход на следующий диск
-    new_drive = drives[drive_index + 1]
-    new_path = f'{new_drive}'
+    # Switching to the next disk (cyclic)
+    new_drive = drives[(drive_index + 1) % len(drives)]
+    new_path = new_drive + "\\"
 
-    if not os.path.exists(parent_path):
+    if not os.path.exists(new_path):
         return current_path
-    
+
     return new_path
 
 
-
 def move_down(current_path: str, target_dir: str) -> Tuple[bool, str]:
-    '''Переход в указанный подкаталог в Windows'''
+    '''
+    The function navigates to the specified subdirectory in the Windows operating system
     
-    # Формирование нового пути
+    Args:
+        current_path (str): the current path in the file system
+        target_dir (str): the name of the subdirectory to go to
+    
+    Returns:
+        Tuple[bool, str]:
+            - (True, new_put): if the transition is completed successfully
+            - (False, current path): if the transition failed
+    '''
+    
+    # Forming a new path
     new_path = os.path.join(current_path, target_dir)
     
-    # Проверка валидность
+    # Validation check
     is_valid, _ = utils.validate_windows_path(new_path)
     if not is_valid:
         return False, current_path
     
-    # Проверка существования директории
-    if not utils.safe_windows_listdir(new_path):
+    # Checking the existence of a directory
+    if not os.path.isdir(new_path):
         return False, current_path
     
     return True, new_path
 
 
-
 def get_windows_special_folders() -> Dict[str, str]:
-    '''Получение путей к специальным папкам Windows'''
+    '''
+    The function returns the paths to special folders of the Windows operating system
+    
+    Returns:
+        Dict[str, str]:
+            - Key: readable folder name (for example, 'Desktop', 'Downloads')
+            - Value: full path to the folder in the file system
+    
+    Folders to collect:
+    
+    User folders (from the USERPROFILE environment variable):
+        - Desktop: User's desktop
+        - Downloads: Downloads folder
+        - Documents: User's documents
+        - Music: Music files
+        - Pictures: Images
+        - Videos: Video files
+        - AppData: Application data
+        - Local/AppData: Local application data
+        - Roaming/AppData: Roaming application data (synced)
+    
+    System folders:
+        - Windows: Windows Directory
+        - System32: System Libraries (64-bit)
+        - SysWOW64: System Libraries (32-bit on a 64-bit system)
+        - ProgramFiles: Program files (64-bit)
+        - ProgramFilesX86: Program files (32-bit)
+    '''
     special_dir = {}
     
+    # User folders
+    # Getting the path to the current user's profile
     user_profile = os.environ.get('USERPROFILE', '')
             
-    special = {
+    user_special = {
         'Desktop' : 'Desktop',
         'Downloads' : 'Downloads',
         'Documents' : 'Documents',
@@ -260,15 +358,26 @@ def get_windows_special_folders() -> Dict[str, str]:
         'Pictures' : 'Pictures',
         'Videos' : 'Videos',
         'AppData' : 'AppData',
-        'Local_AppData' : 'AppData\\Local',
-        'Roaming_AppData' : 'AppData\\Roaming',
+        'Local/AppData' : 'AppData\\Local',
+        'Roaming/AppData' : 'AppData\\Roaming',
     }
 
-    for name, path in special.items():
-        # Формирование нового пути
+    for name, path in user_special.items():
+        # Forming a new path
         full_path = os.path.join(user_profile, path)
-        # Проверка существования пути
+        # Checking the existence of a path
         if os.path.exists(full_path):
             special_dir[name] = full_path
+
+
+    # System folders
+    windows = os.environ.get('SystemRoot', '')
+
+    special_dir['Windows'] = windows
+    special_dir['System32'] = os.path.join(windows, 'System32')
+    special_dir['SysWOW64'] = os.path.join(windows, 'SysWOW64')
+
+    special_dir['ProgramFiles'] = os.environ.get('ProgramFiles', '')
+    special_dir['ProgramFilesX86'] = os.environ.get('ProgramFiles(x86)', '')    
 
     return special_dir
