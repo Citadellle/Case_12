@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Union, List, Tuple
 import ctypes
 
+
 PathString = Union[str, Path]
 
 
@@ -33,11 +34,17 @@ def validate_windows_path(path: PathString) -> Tuple[bool, str]:
     '''
     path_str = str(path)
 
-    # Checking forbidden characters
-    forbidden_chars = '/:*?"<>|'
+    # Colon handling
+    if ':' in path_str:
+        if not (path_str.count(':') == 1 and path_str[1] == ':' and path_str[0].isalpha()):
+            return (False, 'Путь содержит запрещенный символ')
+
+
+    # Other forbidden characters
+    forbidden_chars = '/*?"<>|'
     for char in forbidden_chars:
         if char in path_str:
-            return (False, f'Путь содержит запрещенный символ')
+            return (False, 'Путь содержит запрещенный символ')
 
     # Checking the path length
     if len(path_str) > 260:
@@ -90,8 +97,8 @@ def get_parent_path(path: PathString) -> str:
             - For Windows root paths returns the same path
     
     Example:
-        - For the path 'C:\Users ' parent directory: 'C:\'
-        - For the path 'C:\' returns 'C:\' (unchanged)
+        - For the path 'C:\\Users' parent directory: 'C:\\'
+        - For the path 'C:\\' returns 'C:\\' (unchanged)
     '''
     path_str = str(path)
 
@@ -106,11 +113,10 @@ def get_parent_path(path: PathString) -> str:
 
     # If the parent is empty (''), then the original path is already the root.
     if not parent:
-        # Returning the path with the correct separator
+        # Return the original path normalized to end with a separator.
         if path_str.endswith(os.sep):
-            path_str
-        else:
-            path_str + os.sep
+            return path_str
+        return path_str + os.sep
 
     return parent
 
@@ -137,8 +143,9 @@ def safe_windows_listdir(path: PathString) -> List[str]:
     contents_list = []
 
     try:
+        # Getting a list of element names
         for child in path_obj.iterdir():
-            contents_list.append(str(child))
+            contents_list.append(child.name)
 
     # Access error
     except PermissionError:
