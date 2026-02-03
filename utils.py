@@ -2,9 +2,9 @@ import os
 import platform
 from pathlib import Path
 from typing import Union, List, Tuple
+import ctypes
 
 PathString = Union[str, Path]
-
 
 
 def is_windows_os() -> bool:
@@ -19,7 +19,6 @@ def is_windows_os() -> bool:
     return platform.system() == 'Windows'
 
 
-
 def validate_windows_path(path: PathString) -> Tuple[bool, str]:
     '''
     The function checks the correctness of the path for the Windows operating system
@@ -29,7 +28,7 @@ def validate_windows_path(path: PathString) -> Tuple[bool, str]:
     
     Returns:
         Tuple[bool, str]:
-            - (True, "): if the path is valid
+            - (True, ''): if the path is valid
             - (False, 'error message'): if the path is invalid
     '''
     path_str = str(path)
@@ -51,7 +50,6 @@ def validate_windows_path(path: PathString) -> Tuple[bool, str]:
     return (True, '')
 
 
-
 def format_size(size_bytes: int) -> str:
     '''
     The function formats the file size from bytes into KB, MB, and GB lines
@@ -61,107 +59,141 @@ def format_size(size_bytes: int) -> str:
     
     Returns:
         str:
-        - Size in bytes if less than 1 KB (example: "512 B")
-        - Size in KB if less than 1 MB (example: "2.5 KB")
-        - Size in MB if less than 1 GB (example: "150.3 MB")
-        - Size in GB if 1 GB or more (example: "3.7 GB")
+        - Size in bytes if less than 1 KB
+        - Size in KB if less than 1 MB
+        - Size in MB if less than 1 GB
+        - Size in GB if 1 GB or more
     '''
 
     if size_bytes < 1024:
         return f'{size_bytes} B'
+    
     if size_bytes < 1024**2:
         return f'{round(size_bytes / 1024, 1)} KB'
+    
     if size_bytes < 1024**3:
         return f'{round(size_bytes / 1024**2, 1)} MB'
+    
     return f'{round(size_bytes / 1024**3, 1)} GB'
 
 
-
 def get_parent_path(path: PathString) -> str:
-    '''Получение родительского каталога с учетом Windows путей'''
-    # Вернуть путь к родительскому каталогу
-    # Учесть особенности: C:\ → C:\, C:\Users → C:\
-    # Использовать os.path.dirname с учетом Windows
-
+    '''
+    The function returns the path to the parent directory, taking into account the features of Windows
+    
+    Args:
+        path (PathString): the source path to find the parent directory for.
+    
+    Returns:
+        str:
+            - Path to the parent directory
+            - For Windows root paths returns the same path
+    
+    Example:
+        - For the path 'C:\Users ' parent directory: 'C:\'
+        - For the path 'C:\' returns 'C:\' (unchanged)
+    '''
     path_str = str(path)
 
-    # Если путь уже корень диска (сам себе родитель)
-    if len(path_str) == 3 and path_str.endswith(':\\'):
-        # endswith - проверяет заканчивается ли строка указанным суффиксом
-        return path_str
+    # Windows root path processing
+    if os.name == 'nt':
+        # Checking if it is the root of the disk
+        if len(path_str) == 3 and path_str.endswith(':\\'):
+            return path_str
 
-    # Получаем родительскую директорию (находит родительский каталог)
+    # Getting the parent directory
     parent = os.path.dirname(path_str)
 
-    # Если родитель пустой (выдаёт ''), значит это уже корень
+    # If the parent is empty (''), then the original path is already the root.
     if not parent:
-        # Возвращаем путь с добавлением разделителя (os.sep - это системный разделитель пути)
-        return path_str + os.sep if not path_str.endswith(os.sep) else path_str
+        # Returning the path with the correct separator
+        if path_str.endswith(os.sep):
+            path_str
+        else:
+            path_str + os.sep
 
     return parent
 
 
-
 def safe_windows_listdir(path: PathString) -> List[str]:
-    '''Безопасное получение содержимого каталога в Windows'''
-    # Вернуть список элементов каталога или пустой список при ошибке
-    # Обрабатывать Windows-specific ошибки:
-    # - PermissionError (отказ в доступе)
-    # - FileNotFoundError
-    # - OSError для длинных путей
-    path_str = str(path)
+    '''
+    The function safely retrieves directory contents in Windows with error handling
+    
+    Args:
+        path (PathString): the path to the directory whose contents you want to get
+    
+    Returns:
+        List[str]:
+            - A list of strings with file names and subdirectories in the specified directory
+            - Empty list [] in case of access errors
+    
+    Handled errors:
+        - PermissionError: lack of access rights to the directory
+        - FileNotFoundError: the specified directory does not exist
+        - OSError: system errors, paths that are too long (>260 characters)
+    
+    '''
+    path_obj = Path(path)
+    contents_list = []
+
     try:
-        # Проверяем, что путь существует и это директория
-        if not os.path.exists(path):
-            return []
+        for child in path_obj.iterdir():
+            contents_list.append(str(child))
 
-        if not os.path.isdir(path):
-            return []
-
-        # Получаем список содержимого (файлов и папок)
-        return os.listdir(path)
-
+    # Access error
     except PermissionError:
         print(f'Отказано в доступе к: {path}')
         return []
 
+    # The directory does not exist
     except FileNotFoundError:
         print(f'Директория не найдена: {path}')
         return []
 
+    # Other system errors, including paths that are too long
     except OSError as e:
-        # Обработка ошибок связанных с длинными путями
-        if 'слишком длинный' in str(e).lower() or 'too long' in str(e).lower():
-            print(f'Путь слишком длинный: {path}')
-        else:
-            print(f'Системная ошибка при доступе к {path}: {e}')
+        print(f'Путь слишком длинный: {path}')
         return []
-
-    except Exception as e:
-        # Остальные ошибки
-        print(f'Неизвестная ошибка при чтении {path}: {e}')
-        return []
-
+    
+    return contents_list
 
 
 def is_hidden_windows_file(path: PathString) -> bool:
-    '''Проверка является ли файл скрытым в Windows'''
+    '''
+    The function checks whether the file is hidden
+    
+    Args:
+        path (PathString): the path to the file to be checked
+    
+    Returns:
+        bool:
+            - True: if the file has the "hidden" attribute
+            - False: if the file does not have the "hidden" attribute
+    
+    Note:
+        The function uses the Windows API by ctypes to verify file attributes.
+        kernel32.dll — this is the main Windows system library containing functions
+        for managing files, processes, memory, and other low-level operations.
+        
+        The principle of operation:
+        The GetFileAttributesW function is used, which returns a bitmask of file attributes.
+        The value of FILE_ATTRIBUTE_HIDDEN bit (value 0x2) is checked using the bitwise operation: AND (&).
+        
+        Example (Windows file basic attributes):
+        FILE_ATTRIBUTE_READONLY    = 0x1
+        FILE_ATTRIBUTE_HIDDEN      = 0x2
+        FILE_ATTRIBUTE_SYSTEM      = 0x4
+        FILE_ATTRIBUTE_DIRECTORY   = 0x10
+        FILE_ATTRIBUTE_ARCHIVE     = 0x20
+    '''
 
     path_str = str(path)
 
-    # Проверка существования
-    if not os.path.exists(path_str):
-        return False
+    # Getting the file attributes
+    file_atr = ctypes.windll.kernel32.GetFileAttributesW(path_str)
 
-    file_info = os.stat(path_str)
-
-
-    # Проверяем, есть ли атрибут st_file_attributes у объекта
-    if hasattr(file_info, 'st_file_attributes'):
-        # Получаем атрибуты файла
-        file_attrs = file_info.st_file_attributes
-        # Проверяем бит hidden (значение 2)
-        if file_attrs & 2:
-            return True
-
+    # Check the hidden bit (FILE_ATTRIBUTE_HIDDEN = 0x2)
+    if file_atr & 2:
+        return True
+    
     return False
