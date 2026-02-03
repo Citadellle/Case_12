@@ -425,4 +425,3 @@ def format_windows_search_results(results: List, search_type: str) -> None:
             print(" - " + str(k) + ": " + str(stats[k]))
 
     print("=" * 60 + "\n")
-
