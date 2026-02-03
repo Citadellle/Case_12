@@ -8,8 +8,22 @@ import analysis
 
 
 def find_files_windows(pattern: str, path: str, case_sensitive: bool = False) -> List[str]:
-    """Поиск файлов по шаблону в Windows"""
+    """
+    The function searches for files in Windows directories using a wildcard pattern.
 
+    Arguments:
+        pattern (str):
+            File name pattern supporting '*' and '?' wildcards.
+        path (str):
+            Root directory where the search starts.
+        case_sensitive (bool):
+            -True: search is case-sensitive
+            -False: search is case-insensitive (default)
+
+    Return:
+        List[str]:
+            A list of full paths to files matching the pattern.
+    """
     pattern = pattern.strip()
     path = path.strip().replace("/", "\\")
     path = os.path.normpath(path)
@@ -85,8 +99,19 @@ def find_files_windows(pattern: str, path: str, case_sensitive: bool = False) ->
 
 
 def find_by_windows_extension(extensions: List[str], path: str) -> List[str]:
-    """Поиск файлов по списку расширений Windows"""
+    """
+    The function searches for files in Windows directories by file extensions.
 
+    Arguments:
+        extensions (List[str]):
+            List of file extensions (with or without leading dot).
+        path (str):
+            Root directory where the search starts.
+
+    Return:
+        List[str]:
+            A list of full paths to files with matching extensions.
+    """
     path = path.strip().replace("/", "\\")
     path = os.path.normpath(path)
 
@@ -147,7 +172,22 @@ def find_by_windows_extension(extensions: List[str], path: str) -> List[str]:
 
 
 def find_large_files_windows(min_size_mb: float, path: str) -> List[Dict[str, Any]]:
-    """Поиск крупных файлов в Windows"""
+    """
+    The function searches for large files in Windows directories.
+
+    Arguments:
+        min_size_mb (float):
+            Minimum file size in megabytes.
+        path (str):
+            Root directory where the search starts.
+
+    Return:
+        List[Dict[str, Any]]:
+            A list of dictionaries containing information about large files:
+                - path (str): full file path
+                - size_mb (float): file size in megabytes
+                - type (str): file extension
+    """
     path = path.strip().replace("/", "\\")
     path = os.path.normpath(path)
 
@@ -216,8 +256,17 @@ def find_large_files_windows(min_size_mb: float, path: str) -> List[Dict[str, An
 
 
 def find_windows_system_files(path: str) -> List[str]:
-    """Поиск системных файлов Windows"""
+    """
+    The function searches for Windows system files in standard system directories.
 
+    Arguments:
+        path (str):
+            Fallback directory used if system folders are not detected.
+
+    Return:
+        List[str]:
+            A list of full paths to Windows system files (.exe, .dll, .sys).
+    """
     path = path.strip().replace("/", "\\")
     path = os.path.normpath(path)
 
@@ -255,7 +304,18 @@ def find_windows_system_files(path: str) -> List[str]:
 
 
 def search_menu_handler(current_path: str) -> bool:
-    """Обработчик меню поиска для Windows"""
+    """
+    The function handles the Windows search menu interaction.
+
+    Arguments:
+        current_path (str):
+            Current working directory for search operations.
+
+    Return:
+        bool:
+            -True: return to the previous menu
+            -False: exit menu handling
+    """
     current_path = current_path.strip().replace("/", "\\")
     current_path = os.path.normpath(current_path)
 
@@ -314,7 +374,18 @@ def search_menu_handler(current_path: str) -> bool:
 
 
 def format_windows_search_results(results: List, search_type: str) -> None:
-    """Форматированный вывод результатов поиска для Windows"""
+    """
+    The function formats and prints Windows search results to the console.
+
+    Arguments:
+        results (List):
+            Search results (list of file paths or file info dictionaries).
+        search_type (str):
+            Type of search performed (pattern, extensions, large, system).
+
+    Return:
+        None
+    """ 
     print("\n" + "=" * 60)
     print("Тип поиска: " + str(search_type))
     print("Найдено: " + str(len(results)))
@@ -354,3 +425,4 @@ def format_windows_search_results(results: List, search_type: str) -> None:
             print(" - " + str(k) + ": " + str(stats[k]))
 
     print("=" * 60 + "\n")
+
