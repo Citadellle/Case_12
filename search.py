@@ -288,7 +288,7 @@ def find_windows_system_files(path: str) -> List[str]:
     if len(roots) == 0:
         roots.append(path)
 
-    system_files: List[str] = []
+    system_files: list[str] = []
 
     for root in roots:
         root = str(root).strip().replace("/", "\\")
