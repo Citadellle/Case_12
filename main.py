@@ -174,7 +174,7 @@ def handle_windows_analysis(command: str, current_path: str) -> None:
             print("\nСтатистика по расширениям файлов:")
             print("-" * 50)
             
-            for ext, data in (stats.items():
+            for ext, data in stats.items():
                 # Skip files without extension
                 if ext:
                     print(f"{ext} : {data['count']} файлов, {utils.format_size(data['size'])}")
