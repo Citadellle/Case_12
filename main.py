@@ -56,6 +56,7 @@ def display_main_menu(current_path: str) -> None:
     print("Доступные диски:")
     print(navigation.list_available_drives())
     print("-" * 80)
+    
     print("Доступные команды:")
     print(" 1. Содержимое текущего каталога 📁")
     print(" 2. Статистика текущей директории 📊")
@@ -196,7 +197,6 @@ def run_windows_command(command: str, current_path: str) -> str:
 
     match command:
         case "1":
-            import navigation
             print(f"\nСодержимое директории: {current_path}")
             success, items = navigation.list_directory(current_path)
             if success:
@@ -229,20 +229,6 @@ def main() -> NoReturn:
         print("\nПрограмма будет завершена.")
         sys.exit(1)
 
-    try:
-        import navigation
-        import analysis
-        import search
-
-    except ImportError as e:
-        print(f"ОШИБКА: Не удалось импортировать модуль: {e}")
-        print("Убедитесь, что все модули находятся в той же папке.")
-        sys.exit(1)
-    except OSError as e:
-        print(f"ОШИБКА Windows: {e}")
-        print("Возможно, не хватает системных библиотек.")
-        sys.exit(1)
-
     # Показываем баннер
     display_windows_banner()
 
@@ -252,44 +238,26 @@ def main() -> NoReturn:
     while True:
         try:
             display_main_menu(current_path)
-            command = input("\nВведите команду: ").strip()
+            command = input("\nВведите команду: ")
             current_path = run_windows_command(command, current_path)
 
         # Обработка ошибок
+        except RecursionError:
+            print("\nОШИБКА: Превышена глубина рекурсии!")
+            break
+
         except PermissionError:
             print("\nОШИБКА: Отказано в доступе!")
             print("Запустите программу от имени администратора или выберите другой путь.")
-            
-        except KeyboardInterrupt:
-            print("\nПрограмма прервана пользователем.")
             break
 
-        except OSError as e:
-            if hasattr(e, 'winerror'):
-                winerror = e.winerror
-
-                ERROR_ACCESS_DENIED = 5
-                ERROR_PATH_NOT_FOUND = 3
-                ERROR_INVALID_NAME = 123
-
-                if winerror == ERROR_ACCESS_DENIED:
-                    print("\nОШИБКА: Отказано в доступе (код 5)")
-                    print("Возможно, у вас нет прав на доступ к этому файлу/папке.")
-                elif winerror == ERROR_PATH_NOT_FOUND:
-                    print("\nОШИБКА: Путь не найден (код 3)")
-                    print("Убедитесь, что путь указан правильно.")
-                elif winerror == ERROR_INVALID_NAME:
-                    print("\nОШИБКА: Неверное имя файла (код 123)")
-                    print("Имя содержит недопустимые символы.")
-                else:
-                    print(f"\nОШИБКА Windows (код {winerror}): {e}")
-            else:
-                print(f"\nОШИБКА ОС: {e}")
+        except OSError:
+            print("\nОШИБКА работы операционной системы")
+            break
 
         except Exception as e:
-            print(f"\nНеожиданная ошибка: {e}")
-            print("Тип ошибки:", type(e).__name__)
-            print("Продолжаем работу...")
+            print(f"\nНеизвестная ошибка/исключение: {e}")
+            print("Продолжаем работу")
             
     sys.exit(0)
 
