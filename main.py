@@ -254,10 +254,6 @@ def main() -> NoReturn:
         except OSError:
             print("\nОШИБКА работы операционной системы")
             break
-
-        except Exception as e:
-            print(f"\nНеизвестная ошибка/исключение: {e}")
-            print("Продолжаем работу")
             
     sys.exit(0)
 
