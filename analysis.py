@@ -6,12 +6,12 @@ import navigation
 
 
 def count_files(path: str) -> Tuple[bool, int]:
-"""
-Recursive counting of files in a Windows directory
+    """
+    Recursive counting of files in a Windows directory
     
     Uses navigation.list_directory() to get the contents of the directory
     Recursively traverses subdirectories, counting the total number of files
-"""
+    """
     if not os.path.exists(path):
         return False, 0
 
